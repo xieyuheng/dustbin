@@ -7,15 +7,15 @@
         "build": "vue-cli-service build"
     },
     "dependencies": {
-        "cicada-wasm": "^0.1.0",
-        "file-saver": "^2.0.0",
-        "vue": "^2.5.17",
-        "vue-router": "^3.0.2",
-        "vuex": "^3.0.1"
+        "cicada-wasm": "^0.1.1",
+        "file-saver": "^2.0.2",
+        "vue": "^2.6.10",
+        "vue-router": "^3.1.3",
+        "vuex": "^3.1.2"
     },
     "devDependencies": {
-        "@vue/cli-plugin-babel": "^3.2.0",
-        "@vue/cli-service": "^3.2.0",
-        "vue-template-compiler": "^2.5.17"
+        "@vue/cli-plugin-babel": "^4.0.5",
+        "@vue/cli-service": "^4.0.5",
+        "vue-template-compiler": "^2.6.10"
     }
 }
