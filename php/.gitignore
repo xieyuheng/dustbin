@@ -1,0 +1,16 @@
+# scala
+target
+
+# js
+node_modules
+
+# php
+vendor
+
+# parcel
+.cache
+
+# emacs
+*~
+*#*
+.#*
