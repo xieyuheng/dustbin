@@ -164,8 +164,6 @@ usually this is a list of resources or the result of a search operation.
 A blog example might have a collection of posts,
 and another collection of posts limited to a particular category.
 
-
-
 ### RESTful URLs
 
 RESTful services are often thought of as “pretty URL” services,
