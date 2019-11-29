@@ -1,0 +1,20 @@
+{
+  "name": "easily-solved",
+  "version": "0.0.1",
+  "author": "Xie Yuheng",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "ava 2> /dev/null"
+  },
+  "devDependencies": {
+    "@types/assert": "^1.4.2",
+    "@types/lodash": "^4.14.134",
+    "ava": "^2.0.0",
+    "typedoc": "^0.14.2",
+    "typescript": "^3.5.1"
+  },
+  "dependencies": {
+    "lodash": "^4.17.11"
+  }
+}

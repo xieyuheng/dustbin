@@ -1,0 +1,5 @@
+- Prepare: `npm install`
+- Compile: `npx tsc`
+- Compile and watch: `npx tsc --watch`
+- Run all tests: `npx ava`
+- Run specific test file: `npx ava -sv <path to the test file>`
