@@ -8,7 +8,7 @@ object infer {
     exp match {
       case Var(name: String) =>
         ctx.lookup_type(name) match {
-          case Some(s) => Right(s)
+          case Some(t) => Right(t)
           case None => Left(Err(s"can not find var: ${name} in ctx"))
         }
 
