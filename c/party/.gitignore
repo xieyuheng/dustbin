@@ -1,0 +1,13 @@
+# c
+*.o
+
+# test
+*_test
+
+# cmake
+build
+
+# emacs
+*~
+*#*
+.#*

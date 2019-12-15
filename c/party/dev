@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+function build {
+    pushd src
+    gcc -c ptc_token.c -lczmq
+    gcc ptc_token.c ptc_token_test.c -lczmq -o ptc_token_test
+    popd
+}
+
+function main {
+    for TASK in $@
+    do
+        $TASK
+    done
+}
+
+main $@
