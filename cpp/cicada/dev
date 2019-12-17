@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+function t {
+    pushd src/partech > /dev/null
+    sh build.sh t
+    popd > /dev/null
+}
+
+function main {
+    for TASK in $@
+    do
+        $TASK
+    done
+}
+
+main $@
