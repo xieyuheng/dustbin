@@ -28,10 +28,10 @@ object subtype {
             }.toList
             val (s_arg_type_map, s_return_type) =
               util.force_telescope_with_return(
-                name_list, s.arg_type_map, s.return_type, s.env)
+                name_list, s.arg_type_map, s.return_type, s.ctx)
             val (t_arg_type_map, t_return_type) =
               util.force_telescope_with_return(
-                name_list, t.arg_type_map, t.return_type, t.env)
+                name_list, t.arg_type_map, t.return_type, t.ctx)
             subtype_list_map(ctx, t_arg_type_map, s_arg_type_map)
             subtype(ctx, s_return_type, t_return_type)
           }
@@ -41,12 +41,12 @@ object subtype {
 
         case (s: ValueTl, t: ValueCl) =>
           val name_list = s.type_map.keys.toList
-          val type_map = util.force_telescope(name_list, s.type_map, s.env)
+          val type_map = util.force_telescope(name_list, s.type_map, s.ctx)
           subtype_list_map(ctx, type_map, t.type_map)
 
         case (s: ValueCl, t: ValueTl) =>
           val name_list = t.type_map.keys.toList
-          val type_map = util.force_telescope(name_list, t.type_map, t.env)
+          val type_map = util.force_telescope(name_list, t.type_map, t.ctx)
           subtype_list_map(ctx, s.type_map, type_map)
 
         case (s, t) =>
