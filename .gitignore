@@ -1,8 +1,8 @@
-# scala
-target
+# web
+dist
 
-# parcel
-.cache
+# npm
+node_modules
 
 # emacs
 *~
