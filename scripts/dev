@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -e
+
+function t {
+    test-lib node js
+}
+
+function test-lib {
+    prog=$1
+    ext=$2
+
+    (find . |
+         grep -v "node_modules/" |
+         grep "./*/lib/" |
+         grep "\.test.*$" |
+         grep "\.${ext}$" |
+         parallel --halt now,fail=1 time $prog)
+}
+
+function main {
+    for TASK in $@
+    do
+        $TASK
+    done
+}
+
+main $@
