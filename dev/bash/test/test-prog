@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -e
+__filename="$0"
+__dirname="$(dirname $__filename)"
+source "$__dirname/../gnutime.sh"
+prog=$1
+file=$2
+gnutime $prog $file
