@@ -21,7 +21,7 @@ async function out(prog, files, { echo, snapshot } = {}) {
 }
 
 async function err(prog, files, { echo, snapshot } = {}) {
-  for (const file of files_unfold(files)) {
+  for (const file of await files_unfold(files)) {
     execute(`${prog} ${file}`).then(({ stdout, stderr }) => {
       const head = chalk.bold.red("[snapshot.err]")
       console.log(`${head} ${prog} ${file}`)
