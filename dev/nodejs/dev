@@ -1,0 +1,136 @@
+#!/usr/bin/env node
+
+const fg = require("fast-glob")
+const run = require("./scripts/run")
+const expect = require("./scripts/expect")
+const snapshot = require("./scripts/snapshot")
+require("./scripts/exit-on-unhandled-rejection")
+
+let dev = {}
+
+dev.t = () => {
+  dev.test_lib()
+  dev.test_commands()
+}
+
+dev.test_lib = () => {
+  for (const file of fg.sync("lib/**/*.test.js")) {
+    expect.ok(`node ${file}`)
+  }
+}
+
+dev.test_commands = () => {
+  dev.test_to_json_schema()
+  dev.test_detect()
+  dev.test_translate()
+  dev.test_translate_with_action()
+  dev.test_build()
+}
+
+dev.test_to_json_schema = () => {
+  const prog = "./bin/cya.js to-json-schema"
+
+  const test = (inputs, outputs) => {
+    for (const input of inputs) {
+      for (const output of outputs) {
+        expect.ok(`${prog} -i ${input} -o ${output}`)
+      }
+    }
+  }
+
+  test(
+    [
+      "examples/detect/person-and-address.schema.json",
+      "examples/detect/person-and-address.schema.yaml",
+    ],
+    [
+      "examples/detect/person-and-address.schema.json-schema.json",
+      "examples/detect/person-and-address.schema.json-schema.yaml",
+    ]
+  )
+
+  test(
+    ["examples/detect/union.schema.json", "examples/detect/union.schema.yaml"],
+    [
+      "examples/detect/union.schema.json-schema.json",
+      "examples/detect/union.schema.json-schema.yaml",
+    ]
+  )
+}
+
+dev.test_detect = () => {
+  const prog = "./bin/cya.js detect"
+
+  const test = (inputs) => {
+    for (const input of inputs) {
+      expect.ok(`${prog} -i ${input}`)
+    }
+  }
+
+  test([
+    "examples/detect/person.json",
+    "examples/detect/person.yaml",
+    "examples/detect/person.json",
+    "examples/detect/person.yaml",
+    "examples/detect/address.json",
+    "examples/detect/address.yaml",
+    "examples/detect/address.json",
+    "examples/detect/address.yaml",
+  ])
+}
+
+dev.test_translate = () => {
+  const prog = "./bin/cya.js translate"
+
+  const test = (input, output) => {
+    expect.ok(`${prog} -i ${input} -o ${output}`)
+  }
+
+  test(
+    "examples/translate/enlightenment.yaml",
+    "examples/translate/enlightenment.out.yaml"
+  )
+
+  test(
+    "examples/translate/enlightenment.yaml",
+    "examples/translate/enlightenment.out.json"
+  )
+}
+
+dev.test_translate_with_action = () => {
+  const prog = "./bin/cya.js translate"
+
+  const test = (input, output, action) => {
+    expect.ok(`${prog} -i ${input} -o ${output} -a ${action}`)
+  }
+
+  test(
+    "examples/action/address-1.yaml",
+    "examples/action/address-1.out.yaml",
+    "examples/action/action.js"
+  )
+
+  test(
+    "examples/action/address-2.yaml",
+    "examples/action/address-2.out.yaml",
+    "examples/action/action.js"
+  )
+
+  test(
+    "examples/action/address-3.yaml",
+    "examples/action/address-3.out.yaml",
+    "examples/action/action.js"
+  )
+}
+
+dev.test_build = () => {
+  const prog = "./bin/cya.js build"
+
+  const test = (project) => {
+    expect.ok(`${prog} ${project}`)
+  }
+
+  test("examples/project/project.yaml")
+}
+
+run(dev)
