@@ -1,0 +1,1 @@
+doctestTestFramework := DoctestTestFramework.ScalaTest

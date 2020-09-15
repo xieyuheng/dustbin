@@ -1,0 +1,33 @@
+# log
+log
+
+# log
+data
+
+# js
+dist
+lib
+node_modules
+
+# scala
+target
+
+# parcel
+.cache
+
+# emacs
+*~
+*#*
+.#*
+
+# IntelliJ specific files/directories
+out
+.idea
+*.ipr
+*.iws
+*.iml
+atlassian-ide-plugin.xml
+
+# metals
+.metals/
+.bloop/

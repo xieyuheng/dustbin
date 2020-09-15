@@ -1,0 +1,3 @@
+[submodule "deps/scala-csv"]
+        path = deps/scala-csv
+        url = https://github.com/xieyuheng/scala-csv

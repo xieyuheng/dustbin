@@ -1,0 +1,12 @@
+implicit val db: Database = Database.forURL(
+  url = "jdbc:mysql://localhost:3306/Dida",
+  user = "xyh",
+  password = "",
+  driver = "com.mysql.cj.jdbc.Driver",
+  keepAliveConnection = true,
+  executor = AsyncExecutor(
+    name = "AsyncExecutor.queueSize.10000",
+    minThreads = 20,
+    maxThreads = 20,
+    maxConnections = 20,
+    queueSize = 10000))
