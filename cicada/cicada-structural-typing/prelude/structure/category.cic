@@ -1,0 +1,71 @@
+class category_t {
+  object_t : type
+  morphism_t : { dom, cod : object_t -> type }
+  id : { a : object_t -> morphism_t(a, a) }
+  compose : {
+    suppose a, b, c : object_t
+    f : morphism_t(a, b)
+    g : morphism_t(b, c)
+    -> morphism_t(a, c)
+  }
+  id_left : {
+    suppose a, b : object_t
+    f : morphism_t(a, b)
+    -> equation_t(compose(id(a), f), f)
+  }
+  id_right : {
+    suppose a, b : object_t
+    f : morphism_t(a, b)
+    -> equation_t(compose(f, id(b)), f)
+  }
+  compose_associative : {
+    suppose a, b, c, d : object_t
+    f : morphism_t(a, b)
+    g : morphism_t(b, c)
+    h : morphism_t(c, d)
+    -> equation_t(compose(f, compose(g, h)), compose(compose(f, g), h))
+  }
+}
+
+develop category_t {
+  class mono_t {
+    morphism : {
+      suppose a, b : object_t
+      -> morphism_t(a, b)
+    }
+    cancel_right : {
+      suppose c : object_t
+      f : morphism_t(c, a)
+      g : morphism_t(c, a)
+      equation_t(compose(f, morphism), compose(g, morphism))
+      -> equation_t(f, g)
+    }
+  }
+
+  class epi_t {
+    morphism : {
+      suppose a, b : object_t
+      -> morphism_t(a, b)
+    }
+    cancel_left : {
+      suppose c : object_t
+      f : morphism_t(b, c)
+      g : morphism_t(b, c)
+      equation_t(compose(morphism, f), compose(morphism, g))
+      -> equation_t(f, g)
+    }
+  }
+
+  class iso_t {
+    morphism : {
+      suppose a, b : object_t
+      -> morphism_t(a, b)
+    }
+    inverse : {
+      suppose a, b : object_t
+      -> morphism_t(b, a)
+    }
+    inverse_left : equation_t(compose(morphism, inverse), id(a))
+    inverse_right : equation_t(compose(inverse, morphism), id(b))
+  }
+}

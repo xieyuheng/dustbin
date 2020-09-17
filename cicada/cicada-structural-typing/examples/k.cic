@@ -1,0 +1,4 @@
+class unit_t {}
+unit = {}
+k = { x : type, y : type => x }
+@show k(type, unit_t)
