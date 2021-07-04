@@ -20,17 +20,17 @@ case class Rule(
 }
 
 object Rule {
-  private def getStrLengthLowerBound(rule: Rule, occured: List[Rule]): Int = {
+  private def getStrLengthLowerBound(rule: Rule, occurred: List[Rule]): Int = {
     rule.choices.map { case (_name, parts) =>
       parts.foldLeft(0) { case (bound, part) =>
         part match {
           case RulePartStr(str) => bound + str.length
           case RulePartRule(ruleGen) =>
             val r = ruleGen()
-            if (occured.exists(r.similar)) {
+            if (occurred.exists(r.similar)) {
               bound
             } else {
-              bound + getStrLengthLowerBound(r, r :: occured)
+              bound + getStrLengthLowerBound(r, r :: occurred)
             }
           case RulePartPred(strPred) => bound + strPred.length
         }

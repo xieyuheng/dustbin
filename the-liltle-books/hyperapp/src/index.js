@@ -249,7 +249,7 @@ const frameControl = (state, data, index) =>
 
 const errorView = (state, error) =>
   h("div", { class: "error" }, [
-    text("An error occured:"),
+    text("An error occurred:"),
     h("pre", {}, text(JSON.stringify(error, null, 2))),
   ])
 
