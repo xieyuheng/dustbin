@@ -1,0 +1,48 @@
+{
+  "name": "@cicada-lang/cicada-studyroom",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "format": "prettier src --write"
+  },
+  "prettier": {
+    "semi": false,
+    "trailingComma": "es5"
+  },
+  "dependencies": {
+    "@cicada-lang/cicada": "^0.1.62",
+    "@cicada-lang/librarian": "^0.0.13",
+    "@cicada-lang/partech": "^0.1.4",
+    "@gitbeaker/browser": "^34.1.0",
+    "@octokit/core": "^3.5.1",
+    "@octokit/rest": "^18.10.0",
+    "@tailwindcss/forms": "^0.3.3",
+    "@tailwindcss/postcss7-compat": "^2.2.14",
+    "@tailwindcss/typography": "^0.4.1",
+    "autoprefixer": "^9.8.6",
+    "axios": "^0.21.4",
+    "js-base64": "^3.7.0",
+    "postcss": "^7.0.36",
+    "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.14",
+    "vue": "^2.6.14",
+    "vue-class-component": "^7.2.6",
+    "vue-property-decorator": "^9.1.2",
+    "vue-router": "^3.5.2"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-router": "~4.5.13",
+    "@vue/cli-plugin-typescript": "~4.5.13",
+    "@vue/cli-service": "~4.5.13",
+    "prettier": "^2.4.0",
+    "prettier-plugin-tailwind-css": "^1.5.0",
+    "typescript": "~4.4.2",
+    "vue-template-compiler": "^2.6.14"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}
