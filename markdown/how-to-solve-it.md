@@ -56,10 +56,26 @@ year: 1945
 
 # 偷偷测试一下 Boundary 和 Summary
 
+Markdown 源代码：
+
+``` markdown
 - [xmind] Pure Test
   - A [B1]
-  - B [S1, B]
-  - C [B, S1]
+  - B [S1, B1]
+  - C [B1, S1]
+  - D [S1]
+  - [B1] E
+  - [S1, 1] F
+    - G
+  - H [1]
+```
+
+渲染效果：
+
+- [xmind] Pure Test
+  - A [B1]
+  - B [S1, B1]
+  - C [B1, S1]
   - D [S1]
   - [B1] E
   - [S1, 1] F
