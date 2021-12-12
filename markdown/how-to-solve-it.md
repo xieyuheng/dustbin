@@ -19,7 +19,7 @@ year: 1945
 >
 > Not the teacher should tell the things to the students,
 > if they wish to learn it really, they have to discover it.
-
+>
 > -- [Polya explains the problem solving technique](https://www.youtube.com/watch?v=h0gbw-Ur_do)
 
 在他的书《怎样解题》中，他给出了一个解题时的「问题列表」。
