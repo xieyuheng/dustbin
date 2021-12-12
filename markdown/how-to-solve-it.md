@@ -27,6 +27,12 @@ year: 1945
 在解数学题时这个列表很有用，写程序或者解决某些工程问题的时候，
 稍微变化一下列表中的问题，也受益匪浅。
 
+- [xmind] Our List Summary
+  - Understanding the problem
+  - Devising a plan
+  - Carrying out the plan
+  - Looking back
+
 - [xmind] Our List
   - Understanding the problem
     - What is the unknown?
