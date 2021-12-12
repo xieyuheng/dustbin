@@ -30,10 +30,10 @@ year: 1945
 ## Overview
 
 - [xmind] Our List
-  - (1) Understanding the problem
-  - (2) Devising a plan
-  - (3) Carrying out the plan
-  - (4) Looking back
+  - Understanding the problem
+  - Devising a plan
+  - Carrying out the plan
+  - Looking back
 
 ## Details
 
