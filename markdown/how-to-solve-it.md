@@ -6,8 +6,23 @@ year: 1945
 
 # Our list
 
-著名匈牙利数学家 [George Pólya](https://en.wikipedia.org/wiki/George_P%C3%B3lya)，
-在他的书《怎样解题》中，给出了解题时的「问题列表」。
+[George Pólya](https://en.wikipedia.org/wiki/George_P%C3%B3lya) 是著名匈牙利数学家。
+
+关于「什么是教育？」他的一次演讲中，有一段让人印象深刻的解释：
+
+> Let me put my first point in a question answer form.
+>
+> > What is teaching?
+>
+> In my opinion, teaching is giving opportunity to the students
+> to discover things by themselves.
+>
+> Not the teacher should tell the things to the students,
+> if they wish to learn it really, they have to discover it.
+
+> -- [Polya explains the problem solving technique](https://www.youtube.com/watch?v=h0gbw-Ur_do)
+
+在他的书《怎样解题》中，他给出了一个解题时的「问题列表」。
 
 在解数学题时这个列表很有用，写程序或者解决某些工程问题的时候，
 稍微变化一下列表中的问题，也受益匪浅。
