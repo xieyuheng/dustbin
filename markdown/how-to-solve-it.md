@@ -39,7 +39,7 @@ year: 1945
     - Can you see it at a glance?
     - Can you use the result, or method, for some other problem?
 
-# 测试一下 Boundary 和 Summary
+# 偷偷测试一下 Boundary 和 Summary
 
 - [xmind] Pure Test
   - A [B1]
