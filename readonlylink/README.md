@@ -26,3 +26,5 @@
 优点：
 
 - 代表 View Model 的 class 可以被独立测试（不依赖 vue）。
+- 不需要依赖 vuex 等特殊的状态管理 API。
+- View Model 是简单的 JavaScript class，方便用面向对象的技术来做进一步的 refactor。
