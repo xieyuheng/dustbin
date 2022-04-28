@@ -11,7 +11,7 @@
 
 作为 prop 传递给所有子组件：
 
-```
+```vue
 <BookContents :state="state" />
 <BookPage :state="state" />
 <BookTitlePage :state="state" />
