@@ -1,7 +1,9 @@
 # M·V·VM
 
-| VM (View Model)             | V (View)                    |
-|-----------------------------|----------------------------|
+> 这个文件夹中的代码，是 <https://readonly.link> 这个项目的前端源代码。
+
+| VM (View Model)             | V (View)                   |
+| --------------------------- | -------------------------- |
 | `articles/article-state.ts` | `articles/ArticleRoot.vue` |
 | `books/book-state.ts`       | `books/BookRoot.vue`       |
 
