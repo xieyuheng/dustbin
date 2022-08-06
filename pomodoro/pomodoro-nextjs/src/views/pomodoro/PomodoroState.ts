@@ -15,7 +15,7 @@ export type PomodoroStateJson = {
   timer: TimerJson
   playing: boolean
   editing: boolean
-  currentTesk: Task | null
+  currentTask: Task | null
   tasks: Array<Task>
   inputTaskTitle: string | null
   settings: Settings
@@ -26,7 +26,7 @@ export class PomodoroState {
   timer: Timer
   playing = false
   editing = false
-  currentTesk: Task | null = null
+  currentTask: Task | null = null
   tasks: Array<Task> = []
   inputTaskTitle: string | null = null
   settings: Settings = next.dev ? testingSettings : defaultSettings
@@ -48,8 +48,8 @@ export class PomodoroState {
   private refreshIds(): void {
     const ids: Set<number> = new Set()
 
-    const tasks = this.currentTesk
-      ? [this.currentTesk, ...this.tasks]
+    const tasks = this.currentTask
+      ? [this.currentTask, ...this.tasks]
       : this.tasks
 
     for (const task of tasks) {
@@ -69,7 +69,7 @@ export class PomodoroState {
       timer: this.timer.json(),
       playing: this.playing,
       editing: this.editing,
-      currentTesk: this.currentTesk,
+      currentTask: this.currentTask,
       tasks: this.tasks,
       inputTaskTitle: this.inputTaskTitle,
       settings: this.settings,
@@ -82,7 +82,7 @@ export class PomodoroState {
     state.timer = Timer.create(json.timer)
     state.playing = json.playing
     state.editing = json.editing
-    state.currentTesk = json.currentTesk
+    state.currentTask = json.currentTask
     state.tasks = json.tasks
     state.inputTaskTitle = json.inputTaskTitle
     state.settings = json.settings
@@ -91,8 +91,8 @@ export class PomodoroState {
   }
 
   private createTaskFromTitle(title: string = ""): Task {
-    const tasks = this.currentTesk
-      ? [this.currentTesk, ...this.tasks]
+    const tasks = this.currentTask
+      ? [this.currentTask, ...this.tasks]
       : this.tasks
 
     const ids = tasks.map((task) => task.id)
@@ -105,8 +105,8 @@ export class PomodoroState {
 
     const newTask = this.createTaskFromTitle(this.inputTaskTitle)
 
-    if (this.currentTesk === null) {
-      this.currentTesk = newTask
+    if (this.currentTask === null) {
+      this.currentTask = newTask
       this.inputTaskTitle = null
     } else {
       this.tasks.push(newTask)
@@ -115,8 +115,8 @@ export class PomodoroState {
   }
 
   deleteTask(id: number) {
-    if (this.currentTesk?.id === id) {
-      this.currentTesk = null
+    if (this.currentTask?.id === id) {
+      this.currentTask = null
       if (this.tasks[0]) {
         this.selectTask(this.tasks[0].id)
       }
@@ -198,8 +198,8 @@ export class PomodoroState {
     this.timer.start({
       onFinished: () => {
         this.notify()
-        if (this.currentTesk && this.mode.kind === "Focus") {
-          this.currentTesk.count++
+        if (this.currentTask && this.mode.kind === "Focus") {
+          this.currentTask.count++
         }
       },
     })
@@ -211,11 +211,11 @@ export class PomodoroState {
 
     removeFirst(this.tasks, (task) => task.id === id)
 
-    if (this.currentTesk) {
-      this.tasks.unshift(this.currentTesk)
+    if (this.currentTask) {
+      this.tasks.unshift(this.currentTask)
     }
 
-    this.currentTesk = task
+    this.currentTask = task
   }
 
   formatTitle(): string {
@@ -225,8 +225,8 @@ export class PomodoroState {
       parts.push(`${this.timer.formatTime()}`)
     }
 
-    if (this.currentTesk) {
-      parts.push(`${this.currentTesk.title}`)
+    if (this.currentTask) {
+      parts.push(`${this.currentTask.title}`)
     } else {
       parts.push(`${this.appName}`)
     }

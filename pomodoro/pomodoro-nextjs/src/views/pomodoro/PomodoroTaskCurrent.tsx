@@ -34,8 +34,8 @@ export default observer(function PomodoroTaskCurrent({
           }}
           onDelete={() => {
             state.deleteTask(task.id)
-            if (state.currentTesk) {
-              setInputTitle(state.currentTesk.title)
+            if (state.currentTask) {
+              setInputTitle(state.currentTask.title)
             }
             task.editing = false
           }}

@@ -7,9 +7,9 @@ import PomodoroTaskInput from "./PomodoroTaskInput"
 export default observer(function PomodoroTasks({ state }: { state: State }) {
   return (
     <div className="flex flex-col py-2">
-      {state.currentTesk && (
+      {state.currentTask && (
         <div className="py-3">
-          <PomodoroTaskCurrent state={state} task={state.currentTesk} />
+          <PomodoroTaskCurrent state={state} task={state.currentTask} />
         </div>
       )}
 
