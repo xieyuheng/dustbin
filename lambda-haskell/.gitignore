@@ -1,0 +1,7 @@
+# cabal
+dist-newstyle
+
+# emacs
+*~
+*#*
+.#*
