@@ -29,7 +29,7 @@ https://cicada-lang.org
     (zero (add-is-commutative-on-zero y))
     ((add1 prev almost)
      (equal-compose
-      (equal-map (=> almost prev) add1)
+      (equal-map (almost :prev) add1)
       (equal-swap (add-is-commutative-on-add1 y prev))))))
 ```
 
