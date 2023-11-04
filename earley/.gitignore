@@ -1,0 +1,11 @@
+# zig
+zig-out
+zig-cache
+
+# emacs
+*~
+*#*
+.#*
+
+# idea
+.idea
