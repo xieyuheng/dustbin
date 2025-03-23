@@ -22,7 +22,7 @@
 - Exp
   Constructor -- Value
   Eliminator  -- Neutral
-- value v.s. full value
+- value vs. full value
   - value without union and x: type
 - nominal subtype relation
   instead of structural subtype relation
