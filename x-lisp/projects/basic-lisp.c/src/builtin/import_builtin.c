@@ -235,6 +235,6 @@ import_builtin(mod_t *mod) {
 
     // process
 
-    define_primitive_0(mod, "builtin/current-directory?", x_current_directory);
+    define_primitive_0(mod, "builtin/current-directory", x_current_directory);
     // define_primitive_0(mod, "builtin/exit", x_exit);
 }
