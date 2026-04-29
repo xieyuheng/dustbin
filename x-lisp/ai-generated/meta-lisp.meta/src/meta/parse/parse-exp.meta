@@ -1,0 +1,234 @@
+(module meta)
+
+(claim parse-exp
+  (-> located-sexp-t
+      exp-t))
+
+(define (parse-exp sexp)
+  (match sexp
+    ((symbol-sexp content location) (parse-symbol-exp content location))
+    ((keyword-sexp content location) (keyword-exp content location))
+    ((string-sexp content location) (string-exp content location))
+    ((int-sexp content location) (int-exp content location))
+    ((float-sexp content location) (float-exp content location))
+    ((list-sexp elements location) (parse-compound-exp elements location))))
+
+(claim parse-symbol-exp
+  (-> symbol-t source-location-t
+      exp-t))
+
+(define (parse-symbol-exp content location)
+  (let ((parts (string-split "/" (symbol-to-string content))))
+    (if (equal? 2 (list-length parts))
+      (qualified-var-exp (car parts)
+                         (string-to-symbol (car (cdr parts)))
+                         location)
+      (var-exp content location))))
+
+(claim parse-compound-exp
+  (-> (list-t located-sexp-t) source-location-t
+      exp-t))
+
+(define syntax-keywords
+  ['lambda 'quote 'if 'begin 'let 'let* 'the
+   'when 'unless 'and 'or 'cond
+   '@list '@record '@hash])
+
+(define (parse-compound-exp elements location)
+  (if (symbol-sexp? (list-head elements))
+    (let ((tag (symbol-sexp-content (list-head elements))))
+      (if (list-some? (equal? tag) syntax-keywords)
+        (parse-special-form-exp tag elements location)
+        (parse-apply-exp elements location)))
+    (parse-apply-exp elements location)))
+
+(claim parse-apply-exp
+  (-> (list-t located-sexp-t) source-location-t
+      exp-t))
+
+(define (parse-apply-exp sexps location)
+  (apply-exp (parse-exp (car sexps))
+             (list-map parse-exp (cdr sexps))
+             location))
+
+(claim parse-special-form-exp
+  (-> symbol-t (list-t located-sexp-t) source-location-t
+      exp-t))
+
+(define (parse-special-form-exp tag sexps location)
+  (cond ((equal? tag 'lambda)
+         (let ((parameters (car (cdr sexps)))
+               (body (cdr (cdr sexps))))
+           (lambda-exp (parse-parameters parameters)
+                       (parse-body body location)
+                       location)))
+        ((equal? tag 'quote)
+         (let ((value (car (cdr sexps))))
+           (quote-exp value location)))
+        ((equal? tag 'if)
+         (let ((condition (car (cdr sexps)))
+               (consequent (car (cdr (cdr sexps))))
+               (alternative (car (cdr (cdr (cdr sexps))))))
+           (if-exp (parse-exp condition)
+                   (parse-exp consequent)
+                   (parse-exp alternative)
+                   location)))
+        ((equal? tag 'begin)
+         (let ((body (cdr sexps)))
+           (parse-body body location)))
+        ((equal? tag 'let)
+         (let ((bindings (car (cdr sexps)))
+               (body (cdr (cdr sexps))))
+           (parse-let-like-exp bindings body location)))
+        ((equal? tag 'let*)
+         (let ((bindings (car (cdr sexps)))
+               (body (cdr (cdr sexps))))
+           (parse-let*-like-exp bindings body location)))
+        ((equal? tag 'the)
+         (let ((type (car (cdr sexps)))
+               (exp (car (cdr (cdr sexps)))))
+           (the-exp (parse-exp type)
+                    (parse-exp exp)
+                    location)))
+        ((equal? tag 'when)
+         (let ((condition (car (cdr sexps)))
+               (body (cdr (cdr sexps))))
+           (when-exp (parse-exp condition)
+                     (parse-body body location)
+                     location)))
+        ((equal? tag 'unless)
+         (let ((condition (car (cdr sexps)))
+               (body (cdr (cdr sexps))))
+           (unless-exp (parse-exp condition)
+                       (parse-body body location)
+                       location)))
+        ((equal? tag 'and)
+         (and-exp (list-map parse-exp (cdr sexps))
+                  location))
+        ((equal? tag 'or)
+         (or-exp (list-map parse-exp (cdr sexps))
+                 location))
+        ((equal? tag 'cond)
+         (let ((clauses (cdr sexps)))
+           (cond-exp (list-map parse-cond-clause clauses)
+                     location)))
+        ((equal? tag '@list)
+         (list-exp (list-map parse-exp (cdr sexps))
+                   location))
+        ((equal? tag '@record)
+         (record-exp (parse-record-attributes (cdr sexps))
+                     location))
+        ((equal? tag '@hash)
+         (hash-exp (parse-hash-entries (cdr sexps))
+                   location))))
+
+(claim parse-parameters
+  (-> located-sexp-t
+      (list-t symbol-t)))
+
+(define (parse-parameters sexp)
+  (let ((elements (list-sexp-elements sexp)))
+    (list-map symbol-sexp-content elements)))
+
+(claim parse-body
+  (-> (list-t located-sexp-t) source-location-t
+      exp-t))
+
+(define (parse-body sexps location)
+  (if (equal? 1 (list-length sexps))
+    (parse-exp (car sexps))
+    (begin-sugar-exp (list-map parse-exp sexps) location)))
+
+(claim parse-let-binding
+  (-> located-sexp-t
+      (interface :name symbol-t :rhs exp-t)))
+
+(define (parse-let-binding binding)
+  (let ((elements (list-sexp-elements binding)))
+    {:name (symbol-sexp-content (car elements))
+     :rhs (parse-exp (car (cdr elements)))}))
+
+(claim parse-let-bindings
+  (-> located-sexp-t
+      (list-t (interface :name symbol-t :rhs exp-t))))
+
+(define (parse-let-bindings bindings)
+  (list-map parse-let-binding (list-sexp-elements bindings)))
+
+(claim parse-let-like-exp
+  (-> located-sexp-t (list-t located-sexp-t) source-location-t
+      exp-t))
+
+(define (parse-let-like-exp bindings body location)
+  (parse-let-like-exp* (parse-let-bindings bindings)
+                       (parse-body body location)
+                       location))
+
+(claim parse-let-like-exp*
+  (-> (list-t (interface :name symbol-t :rhs exp-t)) exp-t source-location-t
+      exp-t))
+
+(define (parse-let-like-exp* bindings body-exp location)
+  (if (equal? 0 (list-length bindings))
+    body-exp
+    (let ((binding (list-head bindings)))
+      (let1-exp (:name binding)
+                (:rhs binding)
+                (parse-let-like-exp* (cdr bindings) body-exp location)
+                location))))
+
+(claim parse-let*-like-exp
+  (-> located-sexp-t (list-t located-sexp-t) source-location-t
+      exp-t))
+
+(define (parse-let*-like-exp bindings body location)
+  (parse-let-like-exp bindings body location))
+
+(claim parse-cond-clause
+  (-> located-sexp-t
+      cond-clause-t))
+
+(define (parse-cond-clause clause)
+  (let ((elements (list-sexp-elements clause))
+        (location (list-sexp-location clause)))
+    (let ((question-sexp (car elements))
+          (answer-body (cdr elements)))
+      (if (and (symbol-sexp? question-sexp)
+               (equal? 'else (symbol-sexp-content question-sexp)))
+        {:question (var-exp 'true location)
+         :answer (parse-body answer-body location)
+         :location location}
+        {:question (parse-exp question-sexp)
+         :answer (parse-body answer-body location)
+         :location location}))))
+
+(claim parse-record-attributes
+  (-> (list-t located-sexp-t)
+      (hash-t keyword-t exp-t)))
+
+(define (parse-record-attributes body)
+  (if (equal? 0 (list-length body))
+    (@hash)
+    (if (equal? 1 (list-length body))
+      (error "(parse-exp) @record expects even body length")
+      (let ((key-sexp (car body))
+            (value-sexp (car (cdr body)))
+            (tail (cdr (cdr body))))
+        (if (keyword-sexp? key-sexp)
+          (hash-put (keyword-sexp-content key-sexp)
+                    (parse-exp value-sexp)
+                    (parse-record-attributes tail))
+          (error "(parse-exp) @record expects keyword key"))))))
+
+(claim parse-hash-entries
+  (-> (list-t located-sexp-t)
+      (list-t (interface :key exp-t :value exp-t))))
+
+(define (parse-hash-entries body)
+  (if (equal? 0 (list-length body))
+    []
+    (if (equal? 1 (list-length body))
+      (error "(parse-exp) @hash expects even body length")
+      (cons {:key (parse-exp (car body))
+             :value (parse-exp (car (cdr body)))}
+            (parse-hash-entries (cdr (cdr body)))))))

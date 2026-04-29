@@ -1,0 +1,87 @@
+(module meta)
+
+(define-test evaluate-test
+  (= path "src/meta/evaluate/meta-example-1.txt")
+  (= text (fs-read path))
+  (list-each
+   (lambda (sexp)
+     (= exp (parse-exp sexp))
+     (= mod (make-mod 'evaluate-test))
+     (= env (empty-env))
+     (print exp)
+     (write " -> ")
+     (print (evaluate mod env exp))
+     (newline))
+   (parse-located-sexps path text))
+  (= location {:path "(evaluate-test)"
+               :span {:start {:index 0 :row 0 :column 0}
+                      :end {:index 0 :row 0 :column 0}}})
+  (= mod (make-mod 'evaluate-test))
+  (= env (empty-env))
+  (assert-equal (int-value 42)
+                (evaluate mod env (int-exp 42 location)))
+  (= env (env-put 't (bool-value true) env))
+  (assert-equal (int-value 1)
+                (evaluate mod env
+                  (if-exp (var-exp 't location)
+                          (int-exp 1 location)
+                          (int-exp 2 location)
+                          location)))
+  (assert-equal (int-value 3)
+                (evaluate mod env
+                  (let1-exp 'x
+                            (int-exp 3 location)
+                            (var-exp 'x location)
+                            location)))
+  (= mod2 (make-mod 'evaluate-test))
+  (mod-put-definition!
+   mod2
+   (variable-definition mod2
+                        'global-x
+                        (int-exp 7 location)
+                        (just (int-value 7))
+                        location))
+  (assert-equal (int-value 7)
+                (evaluate mod2 (empty-env) (var-exp 'global-x location)))
+  (assert-equal (int-value 7)
+                (evaluate mod2 (empty-env)
+                          (qualified-var-exp "evaluate-test" 'global-x location)))
+  (assert-equal (int-value 9)
+                (evaluate mod (empty-env)
+                          (begin-sugar-exp [(int-exp 1 location)
+                                            (int-exp 9 location)]
+                                           location)))
+  (= env2 (empty-env))
+  (= env2 (env-put 'true-value (bool-value true) env2))
+  (= env2 (env-put 'false-value (bool-value false) env2))
+  (assert-equal (int-value 5)
+                (evaluate mod env2
+                          (and-exp [(var-exp 'true-value location)
+                                    (int-exp 5 location)]
+                                   location)))
+  (assert-equal (int-value 6)
+                (evaluate mod env2
+                          (or-exp [(var-exp 'false-value location)
+                                   (int-exp 6 location)]
+                                  location)))
+  (= env3 (empty-env))
+  (= env3 (env-put 'true (bool-value true) env3))
+  (= env3 (env-put 'false (bool-value false) env3))
+  (assert-equal (int-value 10)
+                (evaluate mod env3
+                  (cond-exp [{:question (var-exp 'false location)
+                              :answer (int-exp 1 location)
+                              :location location}
+                             {:question (var-exp 'true location)
+                              :answer (int-exp 10 location)
+                              :location location}]
+                            location)))
+  (assert-equal (record-value (@hash :x (int-value 2)
+                                     :y (int-value 2)))
+                (evaluate mod (empty-env)
+                  (update-exp
+                   (record-exp (@hash :x (int-exp 1 location)
+                                      :y (int-exp 2 location))
+                               location)
+                   (@hash :x (int-exp 2 location))
+                   location))))

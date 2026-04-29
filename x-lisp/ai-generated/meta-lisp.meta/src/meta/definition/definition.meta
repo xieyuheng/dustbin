@@ -1,0 +1,26 @@
+(module meta)
+
+(define-data definition-t
+  (function-definition
+   (mod mod-t)
+   (name symbol-t)
+   (parameters (list-t symbol-t))
+   (body exp-t)
+   (location source-location-t))
+  (variable-definition
+   (mod mod-t)
+   (name symbol-t)
+   (body exp-t)
+   (value (maybe-t value-t))
+   (location source-location-t)))
+
+(claim definition-meaning (-> definition-t value-t))
+
+(define (definition-meaning definition)
+  (match definition
+    ((function-definition mod name parameters body location)
+     (closure-value mod (empty-env) parameters body))
+    ((variable-definition mod name body value location)
+     (match value
+       ((just content) content)
+       (nothing (evaluate mod (empty-env) body))))))

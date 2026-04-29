@@ -1,0 +1,205 @@
+(module meta)
+
+(claim type-infer (-> mod-t ctx-t exp-t value-t))
+
+(define (type-infer mod ctx exp)
+  (match exp
+    ((symbol-exp content location) (create-atom-type 'symbol))
+    ((keyword-exp content location) (create-atom-type 'keyword))
+    ((string-exp content location) (create-atom-type 'string))
+    ((int-exp content location) (create-atom-type 'int))
+    ((float-exp content location) (create-atom-type 'float))
+    ((var-exp name location)
+     (if (ctx-has? name ctx)
+       (type-instantiate (ctx-lookup-type name ctx))
+       (create-any-type)))
+    ((qualified-var-exp mod-name name location)
+     (create-any-type))
+    ((lambda-exp parameters body location)
+     (type-infer-lambda mod ctx parameters body))
+    ((apply-exp target args location)
+     (type-infer-apply mod ctx target args))
+    ((let1-exp name rhs body location)
+     (let ((rhs-type (type-infer mod ctx rhs)))
+       (type-infer mod (ctx-put name (type-generalize-in-ctx ctx rhs-type) ctx) body)))
+    ((begin1-exp head body location)
+     (begin (type-infer mod ctx head)
+            (type-infer mod ctx body)))
+    ((begin-sugar-exp sequence location)
+     (type-infer-sequence mod ctx sequence))
+    ((if-exp condition consequent alternative location)
+     (let ((consequent-type (type-infer mod ctx consequent))
+           (alternative-type (type-infer mod ctx alternative)))
+       (if (type-equal? consequent-type alternative-type)
+         consequent-type
+         (create-any-type))))
+    ((and-exp exps location)
+     (begin (type-infer-sequence mod ctx exps)
+            (create-atom-type 'bool)))
+    ((or-exp exps location)
+     (begin (type-infer-sequence mod ctx exps)
+            (create-atom-type 'bool)))
+    ((record-exp attributes location)
+     (create-interface-type
+      (hash-map-value (type-infer mod ctx) attributes)))
+    ((list-exp elements location)
+     (if (equal? 0 (list-length elements))
+       (create-list-type (create-any-type))
+       (let ((element-type (type-infer mod ctx (car elements))))
+         (begin
+           (list-each
+            (lambda (element)
+              (type-check mod ctx element element-type))
+            (cdr elements))
+           (create-list-type element-type)))))
+    ((set-exp elements location)
+     (if (equal? 0 (list-length elements))
+       (create-set-type (create-any-type))
+       (let ((element-type (type-infer mod ctx (car elements))))
+         (begin
+           (list-each
+            (lambda (element)
+              (type-check mod ctx element element-type))
+            (cdr elements))
+           (create-set-type element-type)))))
+    ((hash-exp entries location)
+     (if (equal? 0 (list-length entries))
+       (create-hash-type (create-any-type) (create-any-type))
+       (let ((first-entry (car entries)))
+         (let ((key-type (type-infer mod ctx (:key first-entry)))
+               (value-type (type-infer mod ctx (:value first-entry))))
+           (begin
+             (list-each
+              (lambda (entry)
+                (type-check mod ctx (:key entry) key-type)
+                (type-check mod ctx (:value entry) value-type))
+              (cdr entries))
+             (create-hash-type key-type value-type))))))
+    ((arrow-exp arg-types ret-type location)
+     (begin
+       (list-each (lambda (arg-type)
+                    (type-check mod ctx arg-type (create-type-type)))
+                  arg-types)
+       (type-check mod ctx ret-type (create-type-type))
+       (create-type-type)))
+    ((interface-exp attribute-types location)
+     (begin
+       (hash-each-value (lambda (attribute-type)
+                          (type-check mod ctx attribute-type (create-type-type)))
+                        attribute-types)
+       (create-type-type)))
+    ((extend-interface-exp base-type attribute-types location)
+     (begin
+       (type-check mod ctx base-type (create-type-type))
+       (hash-each-value (lambda (attribute-type)
+                          (type-check mod ctx attribute-type (create-type-type)))
+                        attribute-types)
+       (create-type-type)))
+    ((extend-exp base attributes location)
+     (let ((base-type (type-infer mod ctx base)))
+       (match base-type
+         ((interface-type-value base-attribute-types)
+          (create-interface-type
+           (hash-append base-attribute-types
+                        (hash-map-value (type-infer mod ctx) attributes))))
+         (else (create-any-type)))))
+    ((update-exp base attributes location)
+     (type-infer mod ctx base))
+    ((update-mut-exp base attributes location)
+     (type-infer mod ctx base))
+    ((the-exp type exp location)
+     (let ((given-type (evaluate mod (empty-env) type)))
+       (if (type-check mod ctx exp given-type)
+         given-type
+         (create-any-type))))
+    (else (create-any-type))))
+
+(claim type-infer-lambda (-> mod-t ctx-t (list-t symbol-t) exp-t value-t))
+(define (type-infer-lambda mod ctx parameters body)
+  (if (equal? 0 (list-length parameters))
+    (create-arrow-type [] (type-infer mod ctx body))
+    (let ((arg-type (create-fresh-var-type 'a))
+          (parameter (car parameters))
+          (rest-parameters (cdr parameters)))
+      (create-arrow-type [arg-type]
+                         (type-infer-lambda mod
+                                            (ctx-put parameter arg-type ctx)
+                                            rest-parameters
+                                            body)))))
+
+(claim type-infer-apply (-> mod-t ctx-t exp-t (list-t exp-t) value-t))
+(define (type-infer-apply mod ctx target args)
+  (let ((target-type (type-infer mod ctx target)))
+    (begin
+      (if (keyword-exp? target)
+        (if (equal? 1 (list-length args))
+          (let ((record-type (type-infer mod ctx (car args))))
+            (match record-type
+              ((interface-type-value attribute-types)
+               (if (hash-has? (keyword-exp-content target) attribute-types)
+                 (hash-get (keyword-exp-content target) attribute-types)
+                 (create-any-type)))
+              (else (create-any-type))))
+          (create-any-type))
+        (type-infer-sequence mod ctx args))
+      (match target-type
+        ((arrow-type-value arg-types ret-type) ret-type)
+        (else (create-any-type))))))
+
+(claim type-infer-sequence (-> mod-t ctx-t (list-t exp-t) value-t))
+(define (type-infer-sequence mod ctx sequence)
+  (if (equal? 0 (list-length sequence))
+    (create-any-type)
+    (if (equal? 1 (list-length sequence))
+      (type-infer mod ctx (car sequence))
+      (begin
+        (type-infer mod ctx (car sequence))
+        (type-infer-sequence mod ctx (cdr sequence))))))
+
+(claim type-check (-> mod-t ctx-t exp-t value-t bool-t))
+(define (type-check mod ctx exp given-type)
+  (type-assignable? (type-infer mod ctx exp) given-type))
+
+(claim check-exp (-> mod-t exp-t bool-t))
+(define (check-exp mod exp)
+  (type-check mod (empty-ctx) exp (type-infer mod (empty-ctx) exp)))
+
+(define-test type-check-test
+  (= location {:path "(type-check-test)"
+               :span {:start {:index 0 :row 0 :column 0}
+                      :end {:index 0 :row 0 :column 0}}})
+  (= mod (make-mod 'type-check-test))
+  (= ctx (empty-ctx))
+  (assert (type-check mod ctx
+                      (int-exp 1 location)
+                      (create-atom-type 'int)))
+  (assert-not (type-check mod ctx
+                          (int-exp 1 location)
+                          (create-atom-type 'string)))
+  (assert (type-check mod ctx
+                      (if-exp (var-exp 'true location)
+                              (int-exp 1 location)
+                              (int-exp 2 location)
+                              location)
+                      (create-atom-type 'int)))
+  (assert (arrow-type-value?
+           (type-infer mod ctx
+                       (lambda-exp ['x]
+                                   (var-exp 'x location)
+                                   location))))
+  (assert (type-check mod ctx
+                      (list-exp [(int-exp 1 location) (int-exp 2 location)] location)
+                      (create-list-type (create-atom-type 'int))))
+  (assert (type-check mod ctx
+                      (hash-exp [{:key (string-exp "a" location)
+                                  :value (int-exp 1 location)}]
+                                location)
+                      (create-hash-type (create-atom-type 'string)
+                                        (create-atom-type 'int))))
+  (assert (check-exp mod
+                     (let1-exp 'id
+                               (lambda-exp ['x] (var-exp 'x location) location)
+                               (apply-exp (var-exp 'id location)
+                                          [(int-exp 9 location)]
+                                          location)
+                               location))))

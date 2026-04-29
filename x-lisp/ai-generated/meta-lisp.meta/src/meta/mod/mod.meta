@@ -1,0 +1,23 @@
+(module meta)
+
+(define-interface mod-t
+  :name symbol-t
+  :definitions (hash-t symbol-t definition-t))
+
+(define (make-mod name)
+  {:name name
+   :definitions (make-hash)})
+
+(claim mod-get-definition-maybe (-> mod-t symbol-t (maybe-t definition-t)))
+
+(define (mod-get-definition-maybe mod name)
+  (hash-get-maybe name (:definitions mod)))
+
+(claim mod-put-definition! (-> mod-t definition-t (hash-t symbol-t definition-t)))
+
+(define (mod-put-definition! mod definition)
+  (match definition
+    ((function-definition def-mod name parameters body location)
+     (hash-put! name definition (:definitions mod)))
+    ((variable-definition def-mod name body value location)
+     (hash-put! name definition (:definitions mod)))))

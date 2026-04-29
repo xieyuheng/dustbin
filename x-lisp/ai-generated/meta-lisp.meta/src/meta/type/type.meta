@@ -1,0 +1,517 @@
+(module meta)
+
+(define-type ctx-t (hash-t symbol-t value-t))
+
+(claim empty-ctx (-> ctx-t))
+(define (empty-ctx) (@hash))
+
+(claim ctx-put (-> symbol-t value-t ctx-t ctx-t))
+(define (ctx-put name type ctx) (hash-put name type ctx))
+
+(claim ctx-has? (-> symbol-t ctx-t bool-t))
+(define (ctx-has? name ctx) (hash-has? name ctx))
+
+(claim ctx-lookup-type (-> symbol-t ctx-t value-t))
+(define (ctx-lookup-type name ctx) (hash-get name ctx))
+
+(claim create-atom-type (-> symbol-t value-t))
+(define (create-atom-type name) (atom-type-value name))
+
+(claim create-var-type (-> symbol-t int-t value-t))
+(define (create-var-type name serial) (var-type-value name serial))
+
+(define fresh-var-serial-counter (@hash :next 0))
+
+(claim create-fresh-var-type (-> symbol-t value-t))
+(define (create-fresh-var-type name)
+  (= serial (hash-get :next fresh-var-serial-counter))
+  (hash-put! :next (iadd serial 1) fresh-var-serial-counter)
+  (create-var-type name serial))
+
+(claim create-arrow-type (-> (list-t value-t) value-t value-t))
+(define (create-arrow-type arg-types ret-type)
+  (arrow-type-value arg-types ret-type))
+
+(claim create-list-type (-> value-t value-t))
+(define (create-list-type element-type)
+  (list-type-value element-type))
+
+(claim create-set-type (-> value-t value-t))
+(define (create-set-type element-type)
+  (set-type-value element-type))
+
+(claim create-hash-type (-> value-t value-t value-t))
+(define (create-hash-type key-type value-type)
+  (hash-type-value key-type value-type))
+
+(claim create-interface-type (-> (hash-t keyword-t value-t) value-t))
+(define (create-interface-type attribute-types)
+  (interface-type-value attribute-types))
+
+(claim create-extend-interface-type
+  (-> value-t (hash-t keyword-t value-t) value-t))
+(define (create-extend-interface-type base-type attribute-types)
+  (extend-interface-type-value base-type attribute-types))
+
+(claim create-type-type (-> value-t))
+(define (create-type-type) type-type-value)
+
+(claim create-any-type (-> value-t))
+(define (create-any-type) any-type-value)
+
+(claim create-polymorphic-type (-> (list-t value-t) value-t value-t))
+(define (create-polymorphic-type var-types body-type)
+  (polymorphic-type-value var-types body-type))
+
+(claim type-assignable? (-> value-t value-t bool-t))
+(define (type-assignable? inferred given)
+  (let ((subst (type-unify (empty-subst) inferred given)))
+    (match subst
+      ((just content)
+       (type-subtype? (subst-apply-type content inferred)
+                      (subst-apply-type content given)))
+      (nothing false))))
+
+(claim type-equal? (-> value-t value-t bool-t))
+(define (type-equal? x y)
+  (match x
+    ((atom-type-value x-name)
+     (match y
+       ((atom-type-value y-name) (equal? x-name y-name))
+       (else false)))
+    ((var-type-value x-name x-serial)
+     (match y
+       ((var-type-value y-name y-serial)
+        (and (equal? x-name y-name)
+             (equal? x-serial y-serial)))
+       (else false)))
+    ((arrow-type-value x-arg-types x-ret-type)
+     (match y
+       ((arrow-type-value y-arg-types y-ret-type)
+        (and (type-list-equal? x-arg-types y-arg-types)
+             (type-equal? x-ret-type y-ret-type)))
+       (else false)))
+    ((list-type-value x-element-type)
+     (match y
+       ((list-type-value y-element-type)
+        (type-equal? x-element-type y-element-type))
+       (else false)))
+    ((set-type-value x-element-type)
+     (match y
+       ((set-type-value y-element-type)
+        (type-equal? x-element-type y-element-type))
+       (else false)))
+    ((hash-type-value x-key-type x-value-type)
+     (match y
+       ((hash-type-value y-key-type y-value-type)
+        (and (type-equal? x-key-type y-key-type)
+             (type-equal? x-value-type y-value-type)))
+       (else false)))
+    ((interface-type-value x-attribute-types)
+     (match y
+       ((interface-type-value y-attribute-types)
+        (type-record-equal? x-attribute-types y-attribute-types))
+       (else false)))
+    ((extend-interface-type-value x-base-type x-attribute-types)
+     (match y
+       ((extend-interface-type-value y-base-type y-attribute-types)
+        (and (type-equal? x-base-type y-base-type)
+             (type-record-equal? x-attribute-types y-attribute-types)))
+       (else false)))
+    ((polymorphic-type-value x-var-types x-body-type)
+     (match y
+       ((polymorphic-type-value y-var-types y-body-type)
+        (and (type-list-equal? x-var-types y-var-types)
+             (type-equal? x-body-type y-body-type)))
+       (else false)))
+    (type-type-value
+     (type-type-value? y))
+    (any-type-value
+     (any-type-value? y))
+    (else false)))
+
+(claim type-list-equal? (-> (list-t value-t) (list-t value-t) bool-t))
+(define (type-list-equal? xs ys)
+  (if (equal? (list-length xs) (list-length ys))
+    (if (equal? 0 (list-length xs))
+      true
+      (and (type-equal? (car xs) (car ys))
+           (type-list-equal? (cdr xs) (cdr ys))))
+    false))
+
+(claim type-record-equal?
+  (-> (hash-t keyword-t value-t) (hash-t keyword-t value-t) bool-t))
+
+(define (type-record-equal? xs ys)
+  (and (equal? (list-length (hash-keys xs))
+               (list-length (hash-keys ys)))
+       (type-record-subset? xs ys)
+       (type-record-subset? ys xs)))
+
+(claim type-record-subset?
+  (-> (hash-t keyword-t value-t) (hash-t keyword-t value-t) bool-t))
+
+(define (type-record-subset? xs ys)
+  (type-record-subset-keys? xs ys (hash-keys ys)))
+
+(claim type-record-subset-keys?
+  (-> (hash-t keyword-t value-t) (hash-t keyword-t value-t) (list-t keyword-t) bool-t))
+
+(define (type-record-subset-keys? xs ys keys)
+  (if (equal? 0 (list-length keys))
+    true
+    (let ((key (car keys)))
+      (and (hash-has? key xs)
+           (type-equal? (hash-get key xs) (hash-get key ys))
+           (type-record-subset-keys? xs ys (cdr keys))))))
+
+(define-type subst-t (hash-t value-t value-t))
+
+(claim empty-subst (-> subst-t))
+(define (empty-subst) (@hash))
+
+(claim subst-put (-> value-t value-t subst-t subst-t))
+(define (subst-put var-type type subst)
+  (hash-put var-type type subst))
+
+(claim subst-apply-type (-> subst-t value-t value-t))
+(define (subst-apply-type subst type)
+  (match type
+    ((var-type-value name serial)
+     (if (hash-has? type subst) (hash-get type subst) type))
+    ((arrow-type-value arg-types ret-type)
+     (arrow-type-value (list-map (subst-apply-type subst) arg-types)
+                       (subst-apply-type subst ret-type)))
+    ((list-type-value element-type)
+     (list-type-value (subst-apply-type subst element-type)))
+    ((set-type-value element-type)
+     (set-type-value (subst-apply-type subst element-type)))
+    ((hash-type-value key-type value-type)
+     (hash-type-value (subst-apply-type subst key-type)
+                      (subst-apply-type subst value-type)))
+    ((interface-type-value attribute-types)
+     (interface-type-value (hash-map-value (subst-apply-type subst)
+                                           attribute-types)))
+    ((extend-interface-type-value base-type attribute-types)
+     (extend-interface-type-value
+      (subst-apply-type subst base-type)
+      (hash-map-value (subst-apply-type subst) attribute-types)))
+    ((polymorphic-type-value var-types body-type)
+     (polymorphic-type-value var-types
+                             (subst-apply-type (subst-without-vars subst var-types)
+                                               body-type)))
+    (else type)))
+
+(claim subst-without-vars (-> subst-t (list-t value-t) subst-t))
+(define (subst-without-vars subst var-types)
+  (if (equal? 0 (list-length var-types))
+    subst
+    (subst-without-vars (hash-remove-key (car var-types) subst)
+                        (cdr var-types))))
+
+(claim hash-remove-key (-> value-t (hash-t value-t value-t) (hash-t value-t value-t)))
+(define (hash-remove-key key hash)
+  (let ((new-hash (hash-copy hash)))
+    (begin
+      (hash-delete! key new-hash)
+      new-hash)))
+
+(claim type-var-occurred? (-> value-t value-t bool-t))
+(define (type-var-occurred? var-type type)
+  (match type
+    ((var-type-value found-name found-serial) (type-equal? var-type type))
+    ((arrow-type-value arg-types ret-type)
+     (or (list-some? (type-var-occurred? var-type) arg-types)
+         (type-var-occurred? var-type ret-type)))
+    ((list-type-value element-type)
+     (type-var-occurred? var-type element-type))
+    ((set-type-value element-type)
+     (type-var-occurred? var-type element-type))
+    ((hash-type-value key-type value-type)
+     (or (type-var-occurred? var-type key-type)
+         (type-var-occurred? var-type value-type)))
+    ((interface-type-value attribute-types)
+     (list-some? (lambda (key)
+                   (type-var-occurred? var-type (hash-get key attribute-types)))
+                 (hash-keys attribute-types)))
+    ((extend-interface-type-value base-type attribute-types)
+     (or (type-var-occurred? var-type base-type)
+         (list-some? (lambda (key)
+                       (type-var-occurred? var-type (hash-get key attribute-types)))
+                     (hash-keys attribute-types))))
+    ((polymorphic-type-value var-types body-type)
+     (if (list-some? (type-equal? var-type) var-types)
+       false
+       (type-var-occurred? var-type body-type)))
+    (else false)))
+
+(claim type-unify (-> subst-t value-t value-t (maybe-t subst-t)))
+(define (type-unify subst lhs rhs)
+  (= lhs (subst-apply-type subst lhs))
+  (= rhs (subst-apply-type subst rhs))
+  (if (type-equal? lhs rhs)
+    (just subst)
+    (match lhs
+      ((var-type-value name serial)
+       (if (type-var-occurred? lhs rhs)
+         nothing
+         (just (subst-put lhs rhs subst))))
+      (else
+       (match rhs
+         ((var-type-value name serial)
+          (if (type-var-occurred? rhs lhs)
+            nothing
+            (just (subst-put rhs lhs subst))))
+         (else (type-unify-structural subst lhs rhs)))))))
+
+(claim type-unify-structural (-> subst-t value-t value-t (maybe-t subst-t)))
+(define (type-unify-structural subst lhs rhs)
+  (match lhs
+    ((arrow-type-value lhs-arg-types lhs-ret-type)
+     (match rhs
+       ((arrow-type-value rhs-arg-types rhs-ret-type)
+        (if (equal? (list-length lhs-arg-types) (list-length rhs-arg-types))
+          (match (type-unify-many subst lhs-arg-types rhs-arg-types)
+            ((just new-subst)
+             (type-unify new-subst lhs-ret-type rhs-ret-type))
+            (nothing nothing))
+          nothing))
+       (else nothing)))
+    ((list-type-value lhs-element-type)
+     (match rhs
+       ((list-type-value rhs-element-type)
+        (type-unify subst lhs-element-type rhs-element-type))
+       (else nothing)))
+    ((set-type-value lhs-element-type)
+     (match rhs
+       ((set-type-value rhs-element-type)
+        (type-unify subst lhs-element-type rhs-element-type))
+       (else nothing)))
+    ((hash-type-value lhs-key-type lhs-value-type)
+     (match rhs
+       ((hash-type-value rhs-key-type rhs-value-type)
+        (match (type-unify subst lhs-key-type rhs-key-type)
+          ((just new-subst)
+           (type-unify new-subst lhs-value-type rhs-value-type))
+          (nothing nothing)))
+       (else nothing)))
+    ((interface-type-value lhs-attribute-types)
+     (match rhs
+       ((interface-type-value rhs-attribute-types)
+        (type-unify-record subst lhs-attribute-types rhs-attribute-types))
+       (else nothing)))
+    ((extend-interface-type-value lhs-base-type lhs-attribute-types)
+     (match rhs
+       ((extend-interface-type-value rhs-base-type rhs-attribute-types)
+        (match (type-unify subst lhs-base-type rhs-base-type)
+          ((just new-subst)
+           (type-unify-record new-subst lhs-attribute-types rhs-attribute-types))
+          (nothing nothing)))
+       (else nothing)))
+    ((polymorphic-type-value lhs-var-types lhs-body-type)
+     (type-unify subst (type-instantiate lhs) rhs))
+    (else
+     (match rhs
+       ((polymorphic-type-value rhs-var-types rhs-body-type)
+        (type-unify subst lhs (type-instantiate rhs)))
+       (else nothing)))))
+
+(claim type-unify-many (-> subst-t (list-t value-t) (list-t value-t) (maybe-t subst-t)))
+(define (type-unify-many subst lhs rhs)
+  (if (equal? (list-length lhs) (list-length rhs))
+    (if (equal? 0 (list-length lhs))
+      (just subst)
+      (match (type-unify subst (car lhs) (car rhs))
+        ((just new-subst)
+         (type-unify-many new-subst (cdr lhs) (cdr rhs)))
+        (nothing nothing)))
+    nothing))
+
+(claim type-unify-record
+  (-> subst-t (hash-t keyword-t value-t) (hash-t keyword-t value-t) (maybe-t subst-t)))
+(define (type-unify-record subst lhs rhs)
+  (type-unify-record-keys subst lhs rhs (hash-keys lhs)))
+
+(claim type-unify-record-keys
+  (-> subst-t (hash-t keyword-t value-t) (hash-t keyword-t value-t) (list-t keyword-t)
+      (maybe-t subst-t)))
+
+(define (type-unify-record-keys subst lhs rhs keys)
+  (if (equal? 0 (list-length keys))
+    (just subst)
+    (let ((key (car keys)))
+      (if (hash-has? key rhs)
+        (match (type-unify subst (hash-get key lhs) (hash-get key rhs))
+          ((just new-subst)
+           (type-unify-record-keys new-subst lhs rhs (cdr keys)))
+          (nothing nothing))
+        (type-unify-record-keys subst lhs rhs (cdr keys))))))
+
+(claim type-subtype? (-> value-t value-t bool-t))
+(define (type-subtype? lhs rhs)
+  (or (type-equal? lhs rhs)
+      (any-type-value? rhs)
+      (any-type-value? lhs)
+      (type-subtype-structural? lhs rhs)))
+
+(claim type-subtype-structural? (-> value-t value-t bool-t))
+(define (type-subtype-structural? lhs rhs)
+  (match lhs
+    ((arrow-type-value lhs-arg-types lhs-ret-type)
+     (match rhs
+       ((arrow-type-value rhs-arg-types rhs-ret-type)
+        (and (equal? (list-length lhs-arg-types) (list-length rhs-arg-types))
+             (type-arg-supertypes? lhs-arg-types rhs-arg-types)
+             (type-subtype? lhs-ret-type rhs-ret-type)))
+       (else false)))
+    ((list-type-value lhs-element-type)
+     (match rhs
+       ((list-type-value rhs-element-type)
+        (type-subtype? lhs-element-type rhs-element-type))
+       (else false)))
+    ((set-type-value lhs-element-type)
+     (match rhs
+       ((set-type-value rhs-element-type)
+        (type-subtype? lhs-element-type rhs-element-type))
+       (else false)))
+    ((hash-type-value lhs-key-type lhs-value-type)
+     (match rhs
+       ((hash-type-value rhs-key-type rhs-value-type)
+        (and (type-equal? lhs-key-type rhs-key-type)
+             (type-subtype? lhs-value-type rhs-value-type)))
+       (else false)))
+    ((interface-type-value lhs-attribute-types)
+     (match rhs
+       ((interface-type-value rhs-attribute-types)
+        (type-record-subtype? lhs-attribute-types rhs-attribute-types))
+       (else false)))
+    ((extend-interface-type-value lhs-base-type lhs-attribute-types)
+     (match rhs
+       ((extend-interface-type-value rhs-base-type rhs-attribute-types)
+        (and (type-subtype? lhs-base-type rhs-base-type)
+             (type-record-subtype? lhs-attribute-types rhs-attribute-types)))
+       ((interface-type-value rhs-attribute-types)
+        (type-record-subtype? lhs-attribute-types rhs-attribute-types))
+       (else false)))
+    (else false)))
+
+(claim type-arg-supertypes? (-> (list-t value-t) (list-t value-t) bool-t))
+(define (type-arg-supertypes? lhs rhs)
+  (if (equal? 0 (list-length lhs))
+    true
+    (and (type-subtype? (car rhs) (car lhs))
+         (type-arg-supertypes? (cdr lhs) (cdr rhs)))))
+
+(claim type-record-subtype?
+  (-> (hash-t keyword-t value-t) (hash-t keyword-t value-t) bool-t))
+(define (type-record-subtype? lhs rhs)
+  (type-record-subtype-keys? lhs rhs (hash-keys rhs)))
+
+(claim type-record-subtype-keys?
+  (-> (hash-t keyword-t value-t) (hash-t keyword-t value-t) (list-t keyword-t) bool-t))
+
+(define (type-record-subtype-keys? lhs rhs keys)
+  (if (equal? 0 (list-length keys))
+    true
+    (let ((key (car keys)))
+      (and (hash-has? key lhs)
+           (type-subtype? (hash-get key lhs) (hash-get key rhs))
+           (type-record-subtype-keys? lhs rhs (cdr keys))))))
+
+(claim type-free-vars (-> value-t (list-t value-t)))
+(define (type-free-vars type)
+  (match type
+    ((var-type-value name serial) [type])
+    ((arrow-type-value arg-types ret-type)
+     (free-vars-append (free-vars-list arg-types)
+                       (type-free-vars ret-type)))
+    ((list-type-value element-type) (type-free-vars element-type))
+    ((set-type-value element-type) (type-free-vars element-type))
+    ((hash-type-value key-type value-type)
+     (free-vars-append (type-free-vars key-type)
+                       (type-free-vars value-type)))
+    ((interface-type-value attribute-types)
+     (free-vars-hash attribute-types))
+    ((extend-interface-type-value base-type attribute-types)
+     (free-vars-append (type-free-vars base-type)
+                       (free-vars-hash attribute-types)))
+    ((polymorphic-type-value var-types body-type)
+     (free-vars-remove (type-free-vars body-type) var-types))
+    (else [])))
+
+(claim free-vars-list (-> (list-t value-t) (list-t value-t)))
+(define (free-vars-list types)
+  (if (equal? 0 (list-length types))
+    []
+    (free-vars-append (type-free-vars (car types))
+                      (free-vars-list (cdr types)))))
+
+(claim free-vars-hash (-> (hash-t keyword-t value-t) (list-t value-t)))
+(define (free-vars-hash hash)
+  (if (equal? 0 (list-length (hash-keys hash)))
+    []
+    (free-vars-list (hash-values hash))))
+
+(claim free-vars-append (-> (list-t value-t) (list-t value-t) (list-t value-t)))
+(define (free-vars-append xs ys)
+  (if (equal? 0 (list-length xs))
+    ys
+    (let ((x (car xs)))
+      (if (list-some? (type-equal? x) ys)
+        (free-vars-append (cdr xs) ys)
+        (free-vars-append (cdr xs) (cons x ys))))))
+
+(claim free-vars-remove (-> (list-t value-t) (list-t value-t) (list-t value-t)))
+(define (free-vars-remove xs to-remove)
+  (if (equal? 0 (list-length xs))
+    []
+    (let ((x (car xs)))
+      (if (list-some? (type-equal? x) to-remove)
+        (free-vars-remove (cdr xs) to-remove)
+        (cons x (free-vars-remove (cdr xs) to-remove))))))
+
+(claim ctx-free-vars (-> ctx-t (list-t value-t)))
+(define (ctx-free-vars ctx)
+  (free-vars-list (hash-values ctx)))
+
+(claim type-generalize-in-ctx (-> ctx-t value-t value-t))
+(define (type-generalize-in-ctx ctx type)
+  (let ((vars (free-vars-remove (type-free-vars type)
+                                (ctx-free-vars ctx))))
+    (if (equal? 0 (list-length vars))
+      type
+      (create-polymorphic-type vars type))))
+
+(claim type-instantiate (-> value-t value-t))
+(define (type-instantiate type)
+  (match type
+    ((polymorphic-type-value var-types body-type)
+     (let ((subst (instantiate-subst var-types (empty-subst))))
+       (subst-apply-type subst body-type)))
+    (else type)))
+
+(claim instantiate-subst (-> (list-t value-t) subst-t subst-t))
+(define (instantiate-subst var-types subst)
+  (if (equal? 0 (list-length var-types))
+    subst
+    (instantiate-subst (cdr var-types)
+                       (subst-put (car var-types)
+                                  (create-fresh-var-type 't)
+                                  subst))))
+
+(define-test type-core-test
+  (assert (type-equal? (create-atom-type 'int) (create-atom-type 'int)))
+  (assert-not (type-equal? (create-atom-type 'int) (create-atom-type 'string)))
+  (assert (type-subtype? (create-atom-type 'int) (create-any-type)))
+  (assert (type-subtype?
+           (create-interface-type (@hash :x (create-atom-type 'int)
+                                         :y (create-atom-type 'int)))
+           (create-interface-type (@hash :x (create-atom-type 'int)))))
+  (= maybe-subst (type-unify (empty-subst)
+                             (create-arrow-type [(create-var-type 'a 0)] (create-var-type 'a 0))
+                             (create-arrow-type [(create-atom-type 'int)] (create-atom-type 'int))))
+  (assert (just? maybe-subst))
+  (= poly (create-polymorphic-type [(create-var-type 'a 0)]
+                                   (create-arrow-type [(create-var-type 'a 0)]
+                                                      (create-var-type 'a 0))))
+  (assert (arrow-type-value? (type-instantiate poly))))
