@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+.dark {
+  --color-paper: #141719;
+  --color-paper-deep: #1b1f22;
+  --color-ink: #ece7dc;
+  --color-ink-soft: #c2bcae;
+  --color-ink-muted: #817b6e;
+  --color-line: #2d3338;
+  --color-celadon: #7fb5a0;
+  --color-brass: #d4ad3d;
+  --color-glass: #20322e;
+  color-scheme: dark;
+}
