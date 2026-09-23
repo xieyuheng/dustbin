@@ -11,7 +11,7 @@
     "@types/assert": "^1.4.2",
     "@types/lodash": "^4.14.134",
     "ava": "^2.0.0",
-    "typedoc": "^0.14.2",
+    "typedoc": "^0.23.18",
     "typescript": "^3.5.1"
   },
   "dependencies": {
